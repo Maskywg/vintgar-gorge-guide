@@ -3,10 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>文特高峽谷 健行觀看重點、Google Maps 實景路線與沉浸溪流聲 | Vintgar Gorge</title>
+  <title>文特高峽谷 健行觀看重點、Leaflet.js + OSM 互動路線地圖與沉浸溪流聲 | Vintgar Gorge</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Noto+Serif+TC:wght@400;600;900&family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Leaflet CSS for OpenStreetMap Interactive Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
   
   <style>
     :root {
@@ -18,7 +21,7 @@
       --green-trail: #51cf66;
       --gold-accent: #ffd166;
       --dark-bg: #0c1618;
-      --dark-card: rgba(18, 32, 36, 0.9);
+      --dark-card: rgba(18, 32, 36, 0.92);
       --glass-border: rgba(63, 224, 208, 0.25);
       --text-main: #e8f1f2;
       --text-sub: #a2bac0;
@@ -303,7 +306,7 @@
     }
 
     /* ========================================================
-       GOOGLE MAPS & CLEAR VECTOR ROUTE SYSTEM
+       LEAFLET.JS + OPENSTREETMAP (OSM) INTERACTIVE MAP SYSTEM
        ======================================================== */
     .map-section {
       background: var(--dark-card);
@@ -314,7 +317,7 @@
       box-shadow: 0 16px 40px rgba(0,0,0,0.4);
     }
 
-    .map-nav-bar {
+    .map-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -323,48 +326,100 @@
       margin-bottom: 20px;
     }
 
-    .map-tabs {
+    .map-legend {
       display: flex;
-      background: rgba(0,0,0,0.4);
-      padding: 4px;
-      border-radius: 14px;
-      border: 1px solid rgba(255,255,255,0.1);
-      gap: 4px;
+      gap: 14px;
+      flex-wrap: wrap;
     }
 
-    .map-tab {
-      padding: 8px 18px;
-      border-radius: 10px;
-      font-size: 0.85rem;
-      font-weight: 600;
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.82rem;
       color: var(--text-sub);
-      background: transparent;
-      border: none;
-      cursor: pointer;
-      transition: all 0.2s;
     }
 
-    .map-tab.active {
-      background: var(--primary);
-      color: #fff;
-      box-shadow: 0 2px 10px rgba(14, 131, 136, 0.4);
+    .legend-line {
+      width: 22px;
+      height: 4px;
+      border-radius: 2px;
     }
 
-    .map-frame-wrapper {
-      position: relative;
+    .line-cyan { background: #00c8b3; box-shadow: 0 0 8px #00c8b3; }
+    .line-red { background: #ff6b6b; box-shadow: 0 0 8px #ff6b6b; }
+    .line-green { background: #51cf66; box-shadow: 0 0 8px #51cf66; }
+
+    #vintgarOsmMap {
       width: 100%;
-      height: 520px;
+      height: 540px;
       border-radius: 18px;
-      overflow: hidden;
+      z-index: 10;
       border: 1px solid rgba(255,255,255,0.12);
       box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
     }
 
-    .google-iframe {
-      width: 100%;
-      height: 100%;
-      border: none;
-      display: block;
+    .map-poi-quickbar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .poi-btn {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 11px 14px;
+      color: var(--text-main);
+      font-size: 0.84rem;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .poi-btn:hover {
+      background: rgba(44, 234, 163, 0.18);
+      border-color: var(--emerald-glow);
+      color: var(--emerald-glow);
+      transform: translateY(-2px);
+    }
+
+    /* Custom Map Marker Popup Style */
+    .leaflet-popup-content-wrapper {
+      background: #0f1c1f !important;
+      color: #e8f1f2 !important;
+      border: 1px solid var(--emerald-glow) !important;
+      border-radius: 14px !important;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.7) !important;
+      padding: 4px !important;
+    }
+    .leaflet-popup-tip {
+      background: #0f1c1f !important;
+      border: 1px solid var(--emerald-glow) !important;
+    }
+    .popup-title {
+      font-weight: 800;
+      font-size: 1.05rem;
+      color: var(--emerald-glow);
+      margin-bottom: 6px;
+    }
+    .popup-desc {
+      font-size: 0.84rem;
+      color: #b5ced3;
+      line-height: 1.6;
+    }
+    .popup-badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      background: rgba(44, 234, 163, 0.2);
+      color: var(--emerald-glow);
+      padding: 2px 8px;
+      border-radius: 6px;
+      margin-bottom: 6px;
     }
 
     /* Vector Trail Diagram */
@@ -753,7 +808,7 @@
           <span>🎧 聆聽峽谷水聲</span>
         </button>
         <a href="#mapSection" class="btn btn-outline">
-          <span>🗺️ Google Maps 實景路線</span>
+          <span>🗺️ Leaflet + OSM 互動路線</span>
         </a>
         <a href="#highlights" class="btn btn-outline">
           <span>🌿 5 大觀看重點</span>
@@ -784,41 +839,62 @@
       </div>
     </section>
 
-    <!-- Google Maps & Clear Vector Hiking Route Section -->
+    <!-- Leaflet.js + OpenStreetMap (OSM) Interactive Hiking Map Section -->
     <section class="map-section" id="mapSection">
-      <div class="map-nav-bar">
+      <div class="map-header">
         <div>
-          <div class="section-tag" style="margin-bottom: 2px;">Official Google Maps Integration</div>
+          <div class="section-tag" style="margin-bottom: 2px;">Interactive Trail System</div>
           <h3 style="font-family: 'Noto Serif TC', serif; font-size: 1.5rem; color: #fff;">
-            Google Maps 高清實景與健行路線
+            Leaflet.js + OpenStreetMap (OSM) 互動健行地圖
           </h3>
         </div>
         
-        <!-- Google Map View Mode Switcher -->
-        <div class="map-tabs">
-          <button class="map-tab active" onclick="switchGMap('satellite', this)">🛰️ 衛星空照</button>
-          <button class="map-tab" onclick="switchGMap('terrain', this)">⛰️ 3D 地形</button>
-          <button class="map-tab" onclick="switchGMap('roadmap', this)">🗺️ 標準地圖</button>
+        <div class="map-legend">
+          <div class="legend-item">
+            <div class="legend-line line-cyan"></div>
+            <span>峽谷單向主道 (1.6 km)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-line line-red"></div>
+            <span>紅線回程 (聖凱薩琳 5.7 km)</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-line line-green"></div>
+            <span>綠線捷徑 (山林短徑 4.3 km)</span>
+          </div>
         </div>
       </div>
 
-      <!-- Google Maps High-Definition Interactive Frame -->
-      <div class="map-frame-wrapper">
-        <iframe 
-          id="googleMapFrame"
-          class="google-iframe"
-          src="https://maps.google.com/maps?q=Vintgar%20Gorge,%20Turisti%C4%8Dno%20dru%C5%A1tvo%20Gorje,%20Podhom%2080,%204247%20Zgornje%20Gorje,%20Slovenia&t=k&z=15&ie=UTF8&iwloc=&output=embed"
-          allowfullscreen="" 
-          loading="lazy" 
-          referrerpolicy="no-referrer-when-downgrade">
-        </iframe>
+      <!-- Leaflet Map Canvas Container -->
+      <div id="vintgarOsmMap"></div>
+
+      <!-- POI Quick Jump Buttons -->
+      <div class="map-poi-quickbar">
+        <button class="poi-btn" onclick="focusOsmMap(46.3912, 14.0835, 'entrance')">
+          <span>🚩 00. 入口驗票處 (安全帽領取)</span>
+        </button>
+        <button class="poi-btn" onclick="focusOsmMap(46.3924, 14.0858, 'rapids')">
+          <span>🌊 01. 翡翠碧綠激流與壺穴</span>
+        </button>
+        <button class="poi-btn" onclick="focusOsmMap(46.3932, 14.0875, 'boardwalk')">
+          <span>🪵 02. 懸空崖壁木棧道 Žumrovka</span>
+        </button>
+        <button class="poi-btn" onclick="focusOsmMap(46.3942, 14.0920, 'bridge')">
+          <span>🌉 03. 博希尼百年石拱鐵路橋</span>
+        </button>
+        <button class="poi-btn" onclick="focusOsmMap(46.3958, 14.0978, 'waterfall')">
+          <span>💦 04. 斯拉姆瀑布 Slap Šum (13m)</span>
+        </button>
+        <button class="poi-btn" onclick="focusOsmMap(46.3905, 14.1030, 'catherine')">
+          <span>⛪ 05. 聖凱薩琳教堂與高山牧野</span>
+        </button>
       </div>
 
-      <!-- 100% Clear Vector Hiking Route Diagram (Zero Watermark, Crisp Lines) -->
+      <!-- Vector Trail Diagram for Ultra Crisp Overview -->
       <div class="vector-trail-container">
         <div class="vector-trail-header">
           <h4 style="color: #fff; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
-            <span>🧭 健行路線走向與觀看點示意</span>
+            <span>🧭 健行路線走向拓撲與里程標示</span>
             <span style="font-size: 0.8rem; color: var(--emerald-glow); font-weight: normal;">（超高解析純淨向量）</span>
           </h4>
           <div class="trail-tags">
@@ -843,20 +919,20 @@
               </filter>
             </defs>
 
-            <!-- Background subtle topo lines -->
+            <!-- Topo lines -->
             <path d="M 50,80 Q 250,50 500,70 T 900,60" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="2"/>
             <path d="M 50,180 Q 250,150 500,170 T 900,160" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="2"/>
             <path d="M 50,280 Q 250,250 500,270 T 900,260" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="2"/>
 
-            <!-- Green Trail (Blejska Dobrava Shortcut) -->
+            <!-- Green Trail -->
             <path d="M 720,130 C 650,40 380,40 120,130" fill="none" stroke="#51cf66" stroke-width="3.5" stroke-dasharray="6,6" opacity="0.85"/>
             <text x="430" y="32" fill="#51cf66" font-size="12" font-weight="bold">綠線捷徑（經 Blejska Dobrava 林道，約 1 hr）</text>
 
-            <!-- Red Trail (Sv. Katarina Ridge Return) -->
+            <!-- Red Trail -->
             <path d="M 720,130 C 860,180 820,300 520,300 C 280,300 160,220 120,130" fill="none" stroke="#ff6b6b" stroke-width="4" stroke-dasharray="8,6" opacity="0.9"/>
             <text x="480" y="322" fill="#ff6b6b" font-size="12" font-weight="bold">紅線回程（經 聖凱薩琳教堂高山牧野，約 1.5 hr，最推薦）</text>
 
-            <!-- Canyon Main Trail (Radovna River Bed) -->
+            <!-- Canyon Main Trail -->
             <path d="M 120,130 C 220,160 340,110 460,145 C 580,180 650,110 720,130" fill="none" stroke="url(#canyonGrad)" stroke-width="7" stroke-linecap="round" filter="url(#glow)"/>
             <text x="340" y="105" fill="#3fe0d0" font-size="13" font-weight="bold">拉多夫納河（Radovna River）峽谷單向主道 1.6 km</text>
 
@@ -905,23 +981,23 @@
           </svg>
         </div>
 
-        <!-- Google Maps Direct Navigation Links -->
+        <!-- Direct Navigation External Links -->
         <div class="gmaps-direct-grid">
-          <a href="https://maps.app.goo.gl/yH8hR4Q8b571WkKk7" target="_blank" rel="noopener noreferrer" class="gmaps-link-btn" onclick="updateGMapCoord('Vintgar+Gorge+Entrance')">
+          <a href="https://maps.app.goo.gl/yH8hR4Q8b571WkKk7" target="_blank" rel="noopener noreferrer" class="gmaps-link-btn">
             <span>🚩 峽谷主入口（Podhom）</span>
-            <span style="color: var(--emerald-glow);">開啟 Google Maps ↗</span>
+            <span style="color: var(--emerald-glow);">開啟外部導航 ↗</span>
           </a>
-          <a href="https://maps.google.com/?q=Slap+%C5%A0um,+Slovenia" target="_blank" rel="noopener noreferrer" class="gmaps-link-btn" onclick="updateGMapCoord('Slap+Sum+Vintgar')">
+          <a href="https://maps.google.com/?q=Slap+%C5%A0um,+Slovenia" target="_blank" rel="noopener noreferrer" class="gmaps-link-btn">
             <span>💦 斯拉姆瀑布（Slap Šum）</span>
-            <span style="color: var(--emerald-glow);">開啟 Google Maps ↗</span>
+            <span style="color: var(--emerald-glow);">開啟外部導航 ↗</span>
           </a>
-          <a href="https://maps.google.com/?q=Cerkev+sv.+Katarine,+Zasip" target="_blank" rel="noopener noreferrer" class="gmaps-link-btn" onclick="updateGMapCoord('Cerkev+sv.+Katarine+Zasip')">
+          <a href="https://maps.google.com/?q=Cerkev+sv.+Katarine,+Zasip" target="_blank" rel="noopener noreferrer" class="gmaps-link-btn">
             <span>⛪ 聖凱薩琳教堂（Sv. Katarina）</span>
-            <span style="color: var(--emerald-glow);">開啟 Google Maps ↗</span>
+            <span style="color: var(--emerald-glow);">開啟外部導航 ↗</span>
           </a>
-          <a href="https://maps.google.com/?q=Lake+Bled,+Slovenia" target="_blank" rel="noopener noreferrer" class="gmaps-link-btn" onclick="updateGMapCoord('Lake+Bled+Slovenia')">
+          <a href="https://maps.google.com/?q=Lake+Bled,+Slovenia" target="_blank" rel="noopener noreferrer" class="gmaps-link-btn">
             <span>🏞️ 布萊德湖（Lake Bled）</span>
-            <span style="color: var(--emerald-glow);">開啟 Google Maps ↗</span>
+            <span style="color: var(--emerald-glow);">開啟外部導航 ↗</span>
           </a>
         </div>
 
@@ -1193,38 +1269,190 @@
 
   <footer>
     <p>極東義大利 & 斯洛維尼亞數位策展深旅 • 文特高峽谷（Soteska Vintgar）健行專題</p>
-    <p style="margin-top: 6px; opacity: 0.7;">Google Maps 實景嵌入 • 100% 乾淨無水印向量路線圖 • Web Audio API 擬真溪流音效</p>
+    <p style="margin-top: 6px; opacity: 0.7;">Leaflet.js + OpenStreetMap (OSM) 互動地圖系統 • 100% 乾淨無水印向量路線圖 • Web Audio API 擬真溪流音效</p>
   </footer>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
   <!-- Scripts -->
   <script>
     // -------------------------------------------------------------
-    // 1. GOOGLE MAPS DYNAMIC MODE SWITCHER
+    // 1. LEAFLET.JS + OPENSTREETMAP (OSM) INTERACTIVE MAP SYSTEM
     // -------------------------------------------------------------
-    let currentQuery = "Vintgar Gorge, Podhom 80, 4247 Zgornje Gorje, Slovenia";
+    let osmMap = null;
+    let osmMarkers = {};
 
-    function switchGMap(type, btn) {
-      document.querySelectorAll('.map-tab').forEach(t => t.classList.remove('active'));
-      btn.classList.add('active');
-      
-      let tParam = 'k'; // satellite default
-      if (type === 'terrain') tParam = 'p';
-      if (type === 'roadmap') tParam = 'm';
+    function initOsmMap() {
+      // Base center for Vintgar Gorge & surrounding trails
+      osmMap = L.map('vintgarOsmMap', {
+        scrollWheelZoom: false
+      }).setView([46.3932, 14.0910], 14);
 
-      const frame = document.getElementById('googleMapFrame');
-      frame.src = `https://maps.google.com/maps?q=${encodeURIComponent(currentQuery)}&t=${tParam}&z=15&ie=UTF8&iwloc=&output=embed`;
+      // Base Tile Layers (Multi-layer switcher)
+      // 1. OpenStreetMap Standard (Official OSM)
+      const osmStandard = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors'
+      }).addTo(osmMap);
+
+      // 2. Esri World Imagery (Satellite)
+      const esriSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+      });
+
+      // 3. OpenTopoMap (Topographic with elevation contours)
+      const openTopo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+        maxZoom: 17,
+        attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a>'
+      });
+
+      // Layer Switcher Control
+      const baseMaps = {
+        "🗺️ OpenStreetMap (OSM 標準)": osmStandard,
+        "🛰️ Esri 衛星實景 (Satellite)": esriSatellite,
+        "⛰️ OpenTopo 等高線地形 (Topo)": openTopo
+      };
+      L.control.layers(baseMaps, null, { position: 'topright', collapsed: false }).addTo(osmMap);
+      L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(osmMap);
+
+      // -----------------------------------------------------------
+      // HIKING ROUTES (POLYLINES)
+      // -----------------------------------------------------------
+      // 1. Canyon Main Trail (Emerald Cyan Line: 1.6 km)
+      const canyonTrailCoords = [
+        [46.3912, 14.0835], // 00. Entrance
+        [46.3920, 14.0850], // Rapids
+        [46.3930, 14.0872], // Wooden Boardwalk Žumrovka
+        [46.3942, 14.0920], // Bohinj Railway Bridge
+        [46.3952, 14.0965], // Šum waterfall top
+        [46.3958, 14.0978]  // Šum waterfall base / Exit
+      ];
+
+      const canyonPoly = L.polyline(canyonTrailCoords, {
+        color: '#00c8b3',
+        weight: 6,
+        opacity: 0.95
+      }).addTo(osmMap);
+      canyonPoly.bindPopup('<b style="color:#00c8b3;">峽谷單向主步道 (Radovna River Bed)</b><br>長度: 1.6 km | 步行時間: 約 45 分鐘 | 單向通行');
+
+      // 2. Red Trail (Sv. Katarina Return: 5.7 km Loop)
+      const redTrailCoords = [
+        [46.3958, 14.0978], // Slap Šum Exit
+        [46.3965, 14.1010], // Forest climb
+        [46.3930, 14.1045], // High Ridge
+        [46.3905, 14.1030], // St. Catherine Church
+        [46.3875, 14.0980], // Pastures overlooking Bled
+        [46.3860, 14.0915], // Zasip Village path
+        [46.3885, 14.0850], // Podhom approach
+        [46.3912, 14.0835]  // Back to Main Entrance Parking
+      ];
+
+      const redPoly = L.polyline(redTrailCoords, {
+        color: '#ff6b6b',
+        weight: 4,
+        opacity: 0.88,
+        dashArray: '8, 8'
+      }).addTo(osmMap);
+      redPoly.bindPopup('<b style="color:#ff6b6b;">紅線回程 (聖凱薩琳教堂高山牧野步道)</b><br>總環線長度: 5.7 km | 回程時間: 約 1.5 小時 | 最推薦風景線');
+
+      // 3. Green Trail (Blejska Dobrava Shortcut: 4.3 km)
+      const greenTrailCoords = [
+        [46.3958, 14.0978], // Slap Šum Exit
+        [46.3995, 14.0930], // North slope
+        [46.3970, 14.0850], // Blejska Dobrava forest path
+        [46.3940, 14.0820], // Trail back
+        [46.3912, 14.0835]  // Back to Entrance
+      ];
+
+      const greenPoly = L.polyline(greenTrailCoords, {
+        color: '#51cf66',
+        weight: 3.5,
+        opacity: 0.85,
+        dashArray: '5, 6'
+      }).addTo(osmMap);
+      greenPoly.bindPopup('<b style="color:#51cf66;">綠線捷徑 (Blejska Dobrava 林道)</b><br>總長度: 4.3 km | 回程時間: 約 1 小時');
+
+      // -----------------------------------------------------------
+      // POI MARKERS WITH RICH POPUPS
+      // -----------------------------------------------------------
+      const pois = [
+        {
+          key: 'entrance',
+          lat: 46.3912,
+          lng: 14.0835,
+          title: '🚩 峽谷入口驗票處 (Podhom)',
+          badge: '健行起點 • 領取安全頭盔',
+          desc: '在此驗票入場並免費領取安全岩盔。設有官方停車場、洗手間與遊客中心。開始進入 1.6 km 單向步道。'
+        },
+        {
+          key: 'rapids',
+          lat: 46.3924,
+          lng: 14.0858,
+          title: '🌊 亮點 1：翡翠碧綠激流與壺穴',
+          badge: '水色奇觀 • 野生褐鱒',
+          desc: '拉多夫納河清澈見底的綠松石色融雪水質，巨石後方常可見野生褐鱒逆游，晨間光斑跳動。'
+        },
+        {
+          key: 'boardwalk',
+          lat: 46.3932,
+          lng: 14.0875,
+          title: '🪵 亮點 2：懸空崖壁木棧道 Žumrovka',
+          badge: '步道工程 • 一線天視角',
+          desc: '始建於 1893 年，緊貼垂直石灰岩壁懸空延伸，腳下奔騰急流，近距離感受水霧沁涼。'
+        },
+        {
+          key: 'bridge',
+          lat: 46.3942,
+          lng: 14.0920,
+          title: '🌉 亮點 3：博希尼鐵路百年石拱橋',
+          badge: '1906 奧匈帝國鐵路 • 火車通過點',
+          desc: '跨越峽谷上方 33.5 公尺高的單孔石拱橋。日間約每 1.5~2 小時有列車通過（08:40、10:20、15:15 等），經典明信片機位！'
+        },
+        {
+          key: 'waterfall',
+          lat: 46.3958,
+          lng: 14.0978,
+          title: '💦 亮點 4：斯拉姆瀑布 Slap Šum',
+          badge: '13m 落差 • 峽谷步道終點',
+          desc: '斯洛維尼亞最大河流瀑布之一，設有上下雙層觀景平台，午後斜陽常形成繽紛彩虹。步道出口於此回收安全帽。'
+        },
+        {
+          key: 'catherine',
+          lat: 46.3905,
+          lng: 14.1030,
+          title: '⛪ 亮點 5：聖凱薩琳教堂與高山牧野',
+          badge: '紅線回程高潮 • 遠眺布萊德湖',
+          desc: '佇立於高山草甸的石造小教堂，四周牛群吃草，可俯瞰布萊德盆地與朱利安阿爾卑斯山巒。'
+        }
+      ];
+
+      pois.forEach(p => {
+        const marker = L.marker([p.lat, p.lng]).addTo(osmMap);
+        marker.bindPopup(`
+          <div style="min-width: 220px;">
+            <div class="popup-badge">${p.badge}</div>
+            <div class="popup-title">${p.title}</div>
+            <div class="popup-desc">${p.desc}</div>
+          </div>
+        `);
+        osmMarkers[p.key] = marker;
+      });
     }
 
-    function updateGMapCoord(locationQuery) {
-      currentQuery = locationQuery;
-      const activeTab = document.querySelector('.map-tab.active');
-      let tParam = 'k';
-      if (activeTab && activeTab.textContent.includes('地形')) tParam = 'p';
-      if (activeTab && activeTab.textContent.includes('標準')) tParam = 'm';
-
-      const frame = document.getElementById('googleMapFrame');
-      frame.src = `https://maps.google.com/maps?q=${encodeURIComponent(locationQuery)}&t=${tParam}&z=16&ie=UTF8&iwloc=&output=embed`;
+    function focusOsmMap(lat, lng, key) {
+      if (!osmMap) return;
+      document.getElementById('mapSection').scrollIntoView({ behavior: 'smooth' });
+      osmMap.flyTo([lat, lng], 16, { duration: 1.2 });
+      setTimeout(() => {
+        if (osmMarkers[key]) {
+          osmMarkers[key].openPopup();
+        }
+      }, 1200);
     }
+
+    window.addEventListener('DOMContentLoaded', initOsmMap);
 
     // -------------------------------------------------------------
     // 2. WEB AUDIO API CANYON STREAM NOISE SYNTHESIZER
